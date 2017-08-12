@@ -8,6 +8,8 @@ import (
 	"log"
 	"strconv"
 	"reflect"
+	"context"
+	"cloud.google.com/go/bigtable"
 	"github.com/pborman/uuid"
 )
 
@@ -17,8 +19,8 @@ const (
 	TYPE = "post"
 	DISTANCE = "200km"
 	// Needs to update
-	//PROJECT_ID = "around-xxx"
-	//BT_INSTANCE = "around-post"
+	PROJECT_ID = "core-shard-176022"
+	BT_INSTANCE = "around-post"
 	// Needs to update this URL if you deploy it to cloud.
 	ES_URL = "http://34.208.14.68:9200"
 )
@@ -109,6 +111,31 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Post is saved to Index: %s\n", p.Message)
+
+	ctx := context.Background()
+	// you must update project name here
+	bt_client, err := bigtable.NewClient(ctx, PROJECT_ID, BT_INSTANCE)
+	if err != nil {
+		panic(err)
+		return
+	}
+
+	// save Post into BT as well
+	tbl := bt_client.Open("post")
+	mut := bigtable.NewMutation()
+	t := bigtable.Now()
+
+	mut.Set("post", "user", t, []byte(p.User))
+	mut.Set("post", "message", t, []byte(p.Message))
+	mut.Set("location", "lat", t, []byte(strconv.FormatFloat(p.Location.Lat, 'f', -1, 64)))
+	mut.Set("location", "lon", t, []byte(strconv.FormatFloat(p.Location.Lon, 'f', -1, 64)))
+	err = tbl.Apply(ctx, id, mut)
+	if err != nil {
+		panic(err)
+		return
+	}
+	fmt.Printf("Post is saved to BigTable: %s\n", p.Message)
+
 }
 
 func handlerSearch(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +188,7 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	for _, item := range searchResult.Each(reflect.TypeOf(typ)) {
 		p := item.(Post)
 		fmt.Printf("Post by %s: %s at lat %v and lon %v\n", p.User, p.Message, p.Location.Lat, p.Location.Lon)
-		// TODO(vincent): Perform filtering based on keywords such as web spam etc.
+		// Perform filtering based on keywords such as web spam etc.
 		ps = append(ps, p)
 
 	}
