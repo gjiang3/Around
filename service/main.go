@@ -22,7 +22,7 @@ const (
 	PROJECT_ID = "core-shard-176022"
 	BT_INSTANCE = "around-post"
 	// Needs to update this URL if you deploy it to cloud.
-	ES_URL = "http://34.208.14.68:9200"
+	ES_URL = "http://35.165.229.65:9200"
 )
 
 
@@ -190,7 +190,6 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Post by %s: %s at lat %v and lon %v\n", p.User, p.Message, p.Location.Lat, p.Location.Lon)
 		// Perform filtering based on keywords such as web spam etc.
 		ps = append(ps, p)
-
 	}
 	js, err := json.Marshal(ps)
 	if err != nil {
